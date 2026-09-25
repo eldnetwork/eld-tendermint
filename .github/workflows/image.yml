@@ -1,0 +1,63 @@
+name: image
+
+on:
+  push:
+    branches:
+      - eld/v0.34.24
+    tags:
+      - v0.34.24-eld.*
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - name: Verify upstream import is an ancestor
+        run: |
+          git merge-base --is-ancestor 014cdcf09844d48f6d30f3e520034b7edffd9670 HEAD
+          grep -q 'TMVersionDefault = "0.34.24"' version/version.go
+
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
+        with:
+          go-version: "1.21.13"
+      - name: Build tendermint
+        run: go build -o /tmp/tendermint ./cmd/tendermint
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [verify, go]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+      - name: Login to GHCR
+        if: startsWith(github.ref, 'refs/tags/v0.34.24-eld.')
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        id: build
+        with:
+          context: .
+          platforms: linux/amd64
+          push: ${{ startsWith(github.ref, 'refs/tags/v0.34.24-eld.') }}
+          tags: ghcr.io/eldnetwork/eld-tendermint:${{ github.ref_name }}
+      - name: Record image digest
+        run: |
+          {
+            echo "### Image"
+            echo "ref: ${{ github.ref_name }}"
+            echo "digest: ${{ steps.build.outputs.digest }}"
+          } >> "$GITHUB_STEP_SUMMARY"

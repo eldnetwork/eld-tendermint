@@ -1,0 +1,16 @@
+eld-tendermint
+Copyright (c) 2026 Eld network
+
+This product includes Tendermint Core, Copyright 2016 All in Bits, Inc.
+and later contributors, including The Interchain Foundation.
+See the Apache License 2.0 in LICENSE.
+
+```text
+Upstream: github.com/tendermint/tendermint
+Tag:      v0.34.24
+Commit:   014cdcf09844d48f6d30f3e520034b7edffd9670
+License:  Apache-2.0
+```
+
+The Go tree at that commit is unmodified. Eld files added after the import
+are the packaging layer described in ELD.md.
