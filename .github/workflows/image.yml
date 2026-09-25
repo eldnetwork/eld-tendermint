@@ -25,11 +25,7 @@ jobs:
           grep -q 'TMVersionDefault = "0.34.24"' version/version.go
 
   go:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff

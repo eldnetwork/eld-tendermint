@@ -12,7 +12,7 @@ No Go code is changed. The Eld layer is packaging and docs:
 
 ## Tests
 
-Release gate is Go 1.18: `go build ./cmd/tendermint`, then `go test -tags deadlock` of `crypto`, `consensus`, `types`, `mempool`, `p2p`, `state`, and `node`. `./scripts/ci.sh` runs that gate locally. GitHub Actions builds `./cmd/tendermint` and runs `./scripts/ci.sh test` on Linux and macOS. Test sources are unchanged. These are upstream tests, not Eld patches.
+Release gate is Go 1.18: `go build ./cmd/tendermint`, then `go test -tags deadlock` of `crypto`, `consensus`, `types`, `mempool`, `p2p`, `state`, and `node`. `./scripts/ci.sh` runs that gate locally. GitHub Actions builds `./cmd/tendermint` and runs `./scripts/ci.sh test` on Ubuntu. Test sources are unchanged. These are upstream tests, not Eld patches.
 
 Outside the gate:
 
