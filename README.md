@@ -17,6 +17,17 @@ License:  Apache-2.0
 
 `ghcr.io/eldnetwork/eld-tendermint:v0.34.24-eld.1`
 
+## Publish
+
+Push the commit to `eld` first. `origin` is upstream Tendermint and rejects this tag.
+
+```sh
+git tag -a v0.34.24-eld.2 -m "eld-tendermint v0.34.24-eld.2"
+git push eld v0.34.24-eld.2
+```
+
+The first argument is the remote. A tag matching `v0.34.24-eld.*` starts GitHub Actions. The image is published only after the verify and test jobs pass.
+
 ## What this is
 
 | | |
