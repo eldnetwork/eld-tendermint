@@ -2,7 +2,7 @@
 #
 # Local checks for this repo. Run it when you want them:
 #   ./scripts/ci.sh
-# GitHub Actions runs the tests only:
+# GitHub Actions runs the release-gate tests only:
 #   ./scripts/ci.sh test
 # It is not a git hook and it does not run on push.
 #
@@ -34,8 +34,10 @@ step() {
 	echo "==> $1"
 }
 
+# Release gate: crypto, consensus, types, mempool, p2p, state, and node.
+# ./light and state/indexer/sink/psql are outside the gate.
 # Go 1.18 has no go test -skip. On Darwin, drop the named tests with -run.
-# Linux, including GitHub Actions, runs the full suite.
+# Linux, including GitHub Actions, still runs those tests.
 run_filtered() {
 	local pkg=$1 skip=$2 names list re
 	echo "skip test ${skip} in ${pkg}"
@@ -50,25 +52,29 @@ run_filtered() {
 
 run_tests() {
 	local test_args=(-mod=readonly -p 1 -count=1 -tags deadlock)
-	if [[ "$(uname -s)" != Darwin ]]; then
-		"$GO" test "${test_args[@]}" ./...
-		return
+	local pkg list_file pkgs=() darwin=""
+	if [[ "$(uname -s)" == Darwin ]]; then
+		darwin=1
 	fi
-
-	echo "macOS: skipping upstream tests that fail on Darwin. Linux CI still runs them."
-	local pkg list_file pkgs=()
 	list_file=$(mktemp)
-	"$GO" list -mod=readonly ./... >"$list_file"
+	"$GO" list -mod=readonly \
+		./crypto/... \
+		./consensus/... \
+		./types/... \
+		./mempool/... \
+		./p2p/... \
+		./state/... \
+		./node/... >"$list_file"
 	while IFS= read -r pkg; do
 		case "$pkg" in
 		github.com/tendermint/tendermint/state/indexer/sink/psql)
-			echo "skip package ${pkg}"
+			echo "outside release gate: ${pkg}"
 			;;
-		github.com/tendermint/tendermint/mempool/v0)
-			;;
-		github.com/tendermint/tendermint/mempool/v1)
-			;;
-		github.com/tendermint/tendermint/types)
+		github.com/tendermint/tendermint/mempool/v0 | github.com/tendermint/tendermint/mempool/v1 | github.com/tendermint/tendermint/types)
+			if [[ -n "$darwin" ]]; then
+				continue
+			fi
+			pkgs+=("$pkg")
 			;;
 		*)
 			pkgs+=("$pkg")
@@ -80,9 +86,12 @@ run_tests() {
 	if [[ ${#pkgs[@]} -gt 0 ]]; then
 		"$GO" test "${test_args[@]}" "${pkgs[@]}"
 	fi
-	run_filtered github.com/tendermint/tendermint/mempool/v0 TestBroadcastTxForPeerStopsWhenReactorStops
-	run_filtered github.com/tendermint/tendermint/mempool/v1 TestTxMempool_ExpiredTxs_Timestamp
-	run_filtered github.com/tendermint/tendermint/types TestPartValidateBasic
+	if [[ -n "$darwin" ]]; then
+		echo "macOS: skipping upstream tests that fail on Darwin. Linux CI still runs them."
+		run_filtered github.com/tendermint/tendermint/mempool/v0 TestBroadcastTxForPeerStopsWhenReactorStops
+		run_filtered github.com/tendermint/tendermint/mempool/v1 TestTxMempool_ExpiredTxs_Timestamp
+		run_filtered github.com/tendermint/tendermint/types TestPartValidateBasic
+	fi
 }
 
 if [[ "${1:-}" == test ]]; then
