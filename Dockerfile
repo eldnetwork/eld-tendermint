@@ -1,5 +1,5 @@
-# Pinned golang:1.21.13-alpine3.20 (index digest).
-FROM golang@sha256:2414035b086e3c42b99654c8b26e6f5b1b1598080d65fd03c7f499552ff4dc94 AS build
+# Pinned golang:1.18.10-alpine (index digest). Same image as golang:1.18-alpine.
+FROM golang@sha256:77f25981bd57e60a510165f3be89c901aec90453fd0f1c5a45691f6cb1528807 AS build
 
 WORKDIR /src
 COPY . .

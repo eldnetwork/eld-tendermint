@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
         with:
-          go-version: "1.21.13"
+          go-version: "1.18.10"
       - name: Build tendermint
         run: go build -o /tmp/tendermint ./cmd/tendermint
 
