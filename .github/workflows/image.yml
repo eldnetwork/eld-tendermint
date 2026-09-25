@@ -25,7 +25,11 @@ jobs:
           grep -q 'TMVersionDefault = "0.34.24"' version/version.go
 
   go:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
@@ -33,6 +37,8 @@ jobs:
           go-version: "1.18.10"
       - name: Build tendermint
         run: go build -o /tmp/tendermint ./cmd/tendermint
+      - name: Test
+        run: bash scripts/ci.sh test
 
   image:
     if: startsWith(github.ref, 'refs/tags/v0.34.24-eld.')
