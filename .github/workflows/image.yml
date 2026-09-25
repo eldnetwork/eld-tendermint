@@ -8,9 +8,12 @@ on:
       - v0.34.24-eld.*
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+
+# CI jobs only read the repo. The image job grants packages: write.
 permissions:
   contents: read
-  packages: write
 
 jobs:
   verify:
@@ -37,29 +40,54 @@ jobs:
         run: bash scripts/ci.sh test
 
   image:
-    if: startsWith(github.ref, 'refs/tags/v0.34.24-eld.')
+    # A custom if replaces the default success() check. Keep success() so a
+    # failed verify or go job cannot publish. Branch pushes stay in CI only:
+    # eld/v0.34.24 is not a legal Docker tag.
+    if: success() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v0.34.24-eld.')
     runs-on: ubuntu-latest
     needs: [verify, go]
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
-      - name: Login to GHCR
+      - name: Image name
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
+          flavor: |
+            latest=false
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{raw}}
+            type=sha
+      - name: Build and push
         id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
         with:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/eldnetwork/eld-tendermint:${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
       - name: Record image digest
         run: |
           {
             echo "### Image"
             echo "ref: ${{ github.ref_name }}"
+            echo "tags: ${{ steps.meta.outputs.tags }}"
             echo "digest: ${{ steps.build.outputs.digest }}"
           } >> "$GITHUB_STEP_SUMMARY"
